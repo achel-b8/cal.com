@@ -481,175 +481,236 @@ function FieldEditDialog({
 
   const fieldTypes = Object.values(fieldTypesConfigMap);
 
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
+
+  useEffect(() => {
+    setHasUnsavedChanges(fieldForm.formState.isDirty);
+  }, [fieldForm.formState.isDirty]);
+
+  const handleClose = () => {
+    if (hasUnsavedChanges) {
+      setShowConfirmationDialog(true);
+    } else {
+      onOpenChange(false);
+    }
+  };
+
   return (
-    <Dialog open={dialog.isOpen} onOpenChange={onOpenChange} modal={false}>
-      <DialogContent className="max-h-none" data-testid="edit-field-dialog" forceOverlayWhenNoModal={true}>
-        <Form id="form-builder" form={fieldForm} handleSubmit={handleSubmit}>
-          <div className="h-auto max-h-[85vh] overflow-auto">
-            <DialogHeader title={t("add_a_booking_question")} subtitle={t("booking_questions_description")} />
-            <SelectField
-              defaultValue={fieldTypesConfigMap.text}
-              data-testid="test-field-type"
-              id="test-field-type"
-              isDisabled={
-                fieldForm.getValues("editable") === "system" ||
-                fieldForm.getValues("editable") === "system-but-optional"
-              }
-              onChange={(e) => {
-                const value = e?.value;
-                if (!value) {
-                  return;
+    <>
+      <Dialog
+        open={dialog.isOpen}
+        onOpenChange={(isOpen) => {
+          if (!isOpen && hasUnsavedChanges) {
+            setShowConfirmationDialog(true);
+          } else {
+            onOpenChange(isOpen);
+          }
+        }}
+        modal={false}>
+        <DialogContent
+          className="relative max-h-none"
+          data-testid="edit-field-dialog"
+          forceOverlayWhenNoModal={true}>
+          <button
+            aria-label="閉じる"
+            className="absolute right-2 top-2 rounded-md p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+            onClick={handleClose}>
+            <Icon name="x" className="h-5 w-5" />
+          </button>
+          <Form id="form-builder" form={fieldForm} handleSubmit={handleSubmit}>
+            <div className="h-auto max-h-[85vh] overflow-auto">
+              <DialogHeader
+                title={t("add_a_booking_question")}
+                subtitle={t("booking_questions_description")}
+              />
+              <SelectField
+                defaultValue={fieldTypesConfigMap.text}
+                data-testid="test-field-type"
+                id="test-field-type"
+                isDisabled={
+                  fieldForm.getValues("editable") === "system" ||
+                  fieldForm.getValues("editable") === "system-but-optional"
                 }
-                fieldForm.setValue("type", value, { shouldDirty: true });
-              }}
-              value={fieldTypesConfigMap[formFieldType]}
-              options={fieldTypes.filter((f) => !f.systemOnly)}
-              label={t("input_type")}
-            />
-            {(() => {
-              if (!variantsConfig) {
-                return (
-                  <>
-                    <InputField
-                      required
-                      {...fieldForm.register("name")}
-                      containerClassName="mt-6"
-                      onChange={(e) => {
-                        fieldForm.setValue("name", getFieldIdentifier(e.target.value || ""), {
-                          shouldDirty: true,
-                        });
-                      }}
-                      disabled={
-                        fieldForm.getValues("editable") === "system" ||
-                        fieldForm.getValues("editable") === "system-but-optional"
-                      }
-                      label={t("identifier")}
-                    />
-                    <CheckboxField
-                      description={t("disable_input_if_prefilled")}
-                      {...fieldForm.register("disableOnPrefill", { setValueAs: Boolean })}
-                    />
-                    <div>
-                      {formFieldType === "boolean" ? (
-                        <CheckboxFieldLabel fieldForm={fieldForm} />
-                      ) : (
+                onChange={(e) => {
+                  const value = e?.value;
+                  if (!value) {
+                    return;
+                  }
+                  fieldForm.setValue("type", value, { shouldDirty: true });
+                }}
+                value={fieldTypesConfigMap[formFieldType]}
+                options={fieldTypes.filter((f) => !f.systemOnly)}
+                label={t("input_type")}
+              />
+              {(() => {
+                if (!variantsConfig) {
+                  return (
+                    <>
+                      <InputField
+                        required
+                        {...fieldForm.register("name")}
+                        containerClassName="mt-6"
+                        onChange={(e) => {
+                          fieldForm.setValue("name", getFieldIdentifier(e.target.value || ""), {
+                            shouldDirty: true,
+                          });
+                        }}
+                        disabled={
+                          fieldForm.getValues("editable") === "system" ||
+                          fieldForm.getValues("editable") === "system-but-optional"
+                        }
+                        label={t("identifier")}
+                      />
+                      <CheckboxField
+                        description={t("disable_input_if_prefilled")}
+                        {...fieldForm.register("disableOnPrefill", { setValueAs: Boolean })}
+                      />
+                      <div>
+                        {formFieldType === "boolean" ? (
+                          <CheckboxFieldLabel fieldForm={fieldForm} />
+                        ) : (
+                          <InputField
+                            {...fieldForm.register("label")}
+                            // System fields have a defaultLabel, so there a label is not required
+                            required={
+                              !["system", "system-but-optional"].includes(
+                                fieldForm.getValues("editable") || ""
+                              )
+                            }
+                            placeholder={t(fieldForm.getValues("defaultLabel") || "")}
+                            containerClassName="mt-6"
+                            label={t("label")}
+                          />
+                        )}
+                      </div>
+
+                      {fieldType?.isTextType ? (
                         <InputField
-                          {...fieldForm.register("label")}
-                          // System fields have a defaultLabel, so there a label is not required
-                          required={
-                            !["system", "system-but-optional"].includes(fieldForm.getValues("editable") || "")
-                          }
-                          placeholder={t(fieldForm.getValues("defaultLabel") || "")}
+                          {...fieldForm.register("placeholder")}
                           containerClassName="mt-6"
-                          label={t("label")}
+                          label={t("placeholder")}
+                          placeholder={t(fieldForm.getValues("defaultPlaceholder") || "")}
+                        />
+                      ) : null}
+                      {fieldType?.needsOptions && !fieldForm.getValues("getOptionsAt") ? (
+                        <Controller
+                          name="options"
+                          render={({ field: { value, onChange } }) => {
+                            return <Options onChange={onChange} value={value} className="mt-6" />;
+                          }}
+                        />
+                      ) : null}
+
+                      {!!fieldType?.supportsLengthCheck ? (
+                        <FieldWithLengthCheckSupport containerClassName="mt-6" fieldForm={fieldForm} />
+                      ) : null}
+
+                      {formFieldType === "email" && (
+                        <InputField
+                          {...fieldForm.register("requireEmails")}
+                          containerClassName="mt-6"
+                          onChange={(e) => {
+                            try {
+                              excludeOrRequireEmailSchema.parse(e.target.value);
+                              fieldForm.clearErrors("requireEmails");
+                            } catch (err) {
+                              if (err instanceof ZodError) {
+                                fieldForm.setError("requireEmails", {
+                                  message: err.errors[0]?.message || "Invalid input",
+                                });
+                              }
+                            }
+                          }}
+                          label={t("require_emails_that_contain")}
+                          placeholder="gmail.com, hotmail.com, ..."
                         />
                       )}
-                    </div>
 
-                    {fieldType?.isTextType ? (
-                      <InputField
-                        {...fieldForm.register("placeholder")}
-                        containerClassName="mt-6"
-                        label={t("placeholder")}
-                        placeholder={t(fieldForm.getValues("defaultPlaceholder") || "")}
-                      />
-                    ) : null}
-                    {fieldType?.needsOptions && !fieldForm.getValues("getOptionsAt") ? (
+                      {formFieldType === "email" && (
+                        <InputField
+                          {...fieldForm.register("excludeEmails")}
+                          containerClassName="mt-6"
+                          onChange={(e) => {
+                            try {
+                              excludeOrRequireEmailSchema.parse(e.target.value);
+                              fieldForm.clearErrors("excludeEmails");
+                            } catch (err) {
+                              if (err instanceof ZodError) {
+                                fieldForm.setError("excludeEmails", {
+                                  message: err.errors[0]?.message || "Invalid input",
+                                });
+                              }
+                            }
+                          }}
+                          label={t("exclude_emails_that_contain")}
+                          placeholder="gmail.com, hotmail.com, ..."
+                        />
+                      )}
+
                       <Controller
-                        name="options"
+                        name="required"
+                        control={fieldForm.control}
                         render={({ field: { value, onChange } }) => {
-                          return <Options onChange={onChange} value={value} className="mt-6" />;
+                          const isRequired = shouldConsiderRequired
+                            ? shouldConsiderRequired(fieldForm.getValues())
+                            : value;
+                          return (
+                            <BooleanToggleGroupField
+                              data-testid="field-required"
+                              disabled={fieldForm.getValues("editable") === "system"}
+                              value={isRequired}
+                              onValueChange={(val) => {
+                                onChange(val);
+                              }}
+                              label={t("required")}
+                            />
+                          );
                         }}
                       />
-                    ) : null}
+                    </>
+                  );
+                }
 
-                    {!!fieldType?.supportsLengthCheck ? (
-                      <FieldWithLengthCheckSupport containerClassName="mt-6" fieldForm={fieldForm} />
-                    ) : null}
+                if (!fieldType.isTextType) {
+                  throw new Error("Variants are currently supported only with text type");
+                }
 
-                    {formFieldType === "email" && (
-                      <InputField
-                        {...fieldForm.register("requireEmails")}
-                        containerClassName="mt-6"
-                        onChange={(e) => {
-                          try {
-                            excludeOrRequireEmailSchema.parse(e.target.value);
-                            fieldForm.clearErrors("requireEmails");
-                          } catch (err) {
-                            if (err instanceof ZodError) {
-                              fieldForm.setError("requireEmails", {
-                                message: err.errors[0]?.message || "Invalid input",
-                              });
-                            }
-                          }
-                        }}
-                        label={t("require_emails_that_contain")}
-                        placeholder="gmail.com, hotmail.com, ..."
-                      />
-                    )}
+                return <VariantFields variantsConfig={variantsConfig} fieldForm={fieldForm} />;
+              })()}
+            </div>
 
-                    {formFieldType === "email" && (
-                      <InputField
-                        {...fieldForm.register("excludeEmails")}
-                        containerClassName="mt-6"
-                        onChange={(e) => {
-                          try {
-                            excludeOrRequireEmailSchema.parse(e.target.value);
-                            fieldForm.clearErrors("excludeEmails");
-                          } catch (err) {
-                            if (err instanceof ZodError) {
-                              fieldForm.setError("excludeEmails", {
-                                message: err.errors[0]?.message || "Invalid input",
-                              });
-                            }
-                          }
-                        }}
-                        label={t("exclude_emails_that_contain")}
-                        placeholder="gmail.com, hotmail.com, ..."
-                      />
-                    )}
+            <DialogFooter className="relative">
+              <DialogClose color="secondary">{t("cancel")}</DialogClose>
+              <Button data-testid="field-add-save" type="submit">
+                {isFieldEditMode ? t("save") : t("add")}
+              </Button>
+            </DialogFooter>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
-                    <Controller
-                      name="required"
-                      control={fieldForm.control}
-                      render={({ field: { value, onChange } }) => {
-                        const isRequired = shouldConsiderRequired
-                          ? shouldConsiderRequired(fieldForm.getValues())
-                          : value;
-                        return (
-                          <BooleanToggleGroupField
-                            data-testid="field-required"
-                            disabled={fieldForm.getValues("editable") === "system"}
-                            value={isRequired}
-                            onValueChange={(val) => {
-                              onChange(val);
-                            }}
-                            label={t("required")}
-                          />
-                        );
-                      }}
-                    />
-                  </>
-                );
-              }
-
-              if (!fieldType.isTextType) {
-                throw new Error("Variants are currently supported only with text type");
-              }
-
-              return <VariantFields variantsConfig={variantsConfig} fieldForm={fieldForm} />;
-            })()}
-          </div>
-
-          <DialogFooter className="relative">
-            <DialogClose color="secondary">{t("cancel")}</DialogClose>
-            <Button data-testid="field-add-save" type="submit">
-              {isFieldEditMode ? t("save") : t("add")}
+      {/* Confirmation dialog for unsaved changes */}
+      <Dialog open={showConfirmationDialog} onOpenChange={setShowConfirmationDialog}>
+        <DialogContent>
+          <DialogHeader title={t("unsaved_changes")} />
+          <p>{t("unsaved_changes_description") || "未保存の変更があります。保存せずに閉じますか？"}</p>
+          <DialogFooter>
+            <Button color="secondary" onClick={() => setShowConfirmationDialog(false)}>
+              {t("cancel") || "キャンセル"}
+            </Button>
+            <Button
+              color="primary"
+              onClick={() => {
+                setShowConfirmationDialog(false);
+                onOpenChange(false);
+              }}>
+              {t("close") || "閉じる"}
             </Button>
           </DialogFooter>
-        </Form>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
