@@ -163,6 +163,7 @@ export const listMembersHandler = async ({ ctx, input }: GetOptions) => {
       id: true,
       role: true,
       accepted: true,
+      createdAt: true,
       user: {
         select: {
           id: true,
@@ -247,6 +248,13 @@ export const listMembersHandler = async ({ ctx, input }: GetOptions) => {
               timeZone: ctx.user.timeZone,
             })
               .format(membership.user.lastActiveAt)
+              .toLowerCase()
+          : null,
+        memberSince: membership.createdAt
+          ? new Intl.DateTimeFormat(ctx.user.locale, {
+              timeZone: ctx.user.timeZone,
+            })
+              .format(membership.createdAt)
               .toLowerCase()
           : null,
         avatarUrl: user.avatarUrl,

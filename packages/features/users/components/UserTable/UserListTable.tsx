@@ -72,6 +72,7 @@ const initalColumnVisibility = {
   member: true,
   role: true,
   teams: true,
+  memberSince: true,
   actions: true,
 };
 
@@ -362,6 +363,11 @@ function UserListTableContent() {
         },
       },
       ...generateAttributeColumns(),
+      {
+        id: "memberSince",
+        header: "Member Since",
+        cell: ({ row }) => <div>{row.original.memberSince}</div>,
+      },
       {
         id: "lastActiveAt",
         header: "Last Active",
