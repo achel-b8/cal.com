@@ -89,16 +89,18 @@ export async function handler(req: {
 /**
  * 従来のhandleNewBooking関数をリファクタリングされた新しいハンドラーにリダイレクトします
  * 後方互換性のために維持されています
+ * テスト用に古い形式のAPIも維持しています
  */
-export default async function handleNewBooking(req: {
-  input: Record<string, unknown>;
-  ctx: {
-    user?: { id: number; email: string; username: string };
-    res?: { statusCode: number };
-    hostname?: string;
-    forcedSlug?: string;
-    isPlatform?: boolean;
-  };
-}) {
+export default async function handleNewBooking(req: any) {
+  if (req.bookingData) {
+    return await handler({
+      input: {
+        ...req.bookingData,
+        eventTypeId: req.bookingData.eventTypeId,
+      },
+      ctx: {},
+    });
+  }
+
   return await handler(req);
 }
