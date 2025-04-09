@@ -17,7 +17,7 @@ const log = logger.getSubLogger({ prefix: ["[handleNewBooking]"] });
  */
 export async function handler(req: {
   input: Record<string, unknown>;
-  ctx: {
+  ctx?: {
     user?: { id: number; email: string; username: string };
     res?: { statusCode: number };
     hostname?: string;
@@ -25,7 +25,7 @@ export async function handler(req: {
     isPlatform?: boolean;
   };
 }) {
-  const { input, ctx } = req;
+  const { input, ctx = {} } = req;
   const { user } = ctx;
   const userId = user?.id;
 
