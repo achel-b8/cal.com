@@ -30,7 +30,12 @@ export async function handler(req: {
   const userId = user?.id;
 
   try {
-    const eventType = await getEventTypesFromDB(input.eventTypeId as number);
+    const eventTypeId = input?.eventTypeId as number | undefined;
+    if (!eventTypeId) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Event type ID is required" });
+    }
+
+    const eventType = await getEventTypesFromDB(eventTypeId);
     if (!eventType) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Event type not found" });
     }
