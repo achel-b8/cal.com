@@ -69,12 +69,18 @@ export const BaseAppFork = {
   }) {
     const appDirPath = getAppDirPath(slug, isTemplate);
     if (!editMode) {
-      await execSync(IS_WINDOWS_PLATFORM ? `mkdir ${appDirPath}` : `mkdir -p ${appDirPath}`);
-      await execSync(
-        IS_WINDOWS_PLATFORM
-          ? `xcopy "${TEMPLATES_PATH}\\${template}\\*" "${appDirPath}" /e /i`
-          : `cp -r ${TEMPLATES_PATH}/${template}/* ${appDirPath}`
-      );
+      if (IS_WINDOWS_PLATFORM) {
+        await execSync("mkdir", [appDirPath]);
+        await execSync("xcopy", [
+          `${TEMPLATES_PATH}\\${template}\\*`,
+          appDirPath,
+          "/e",
+          "/i",
+        ]);
+      } else {
+        await execSync("mkdir", ["-p", appDirPath]);
+        await execSync("cp", ["-r", `${TEMPLATES_PATH}/${template}/.`, appDirPath]);
+      }
     } else {
       if (!oldSlug) {
         throw new Error("oldSlug is required when editMode is true");
@@ -83,9 +89,11 @@ export const BaseAppFork = {
         // We need to rename only if they are different
         const oldAppDirPath = getAppDirPath(oldSlug, isTemplate);
 
-        await execSync(
-          IS_WINDOWS_PLATFORM ? `move ${oldAppDirPath} ${appDirPath}` : `mv ${oldAppDirPath} ${appDirPath}`
-        );
+        if (IS_WINDOWS_PLATFORM) {
+          await execSync("move", [oldAppDirPath, appDirPath]);
+        } else {
+          await execSync("mv", [oldAppDirPath, appDirPath]);
+        }
       }
     }
     updatePackageJson({ slug, appDirPath, appDescription: description });
@@ -126,15 +134,19 @@ export const BaseAppFork = {
         .replace(/_APP_DIR_/g, slug)
     );
     // New monorepo package has been added, so we need to run yarn again
-    await execSync("yarn");
+    await execSync("yarn", []);
   },
 
   delete: async function ({ slug, isTemplate }: { slug: string; isTemplate: boolean }) {
     const appDirPath = getAppDirPath(slug, isTemplate);
-    await execSync(IS_WINDOWS_PLATFORM ? `rd /s /q ${appDirPath}` : `rm -rf ${appDirPath}`);
+    if (IS_WINDOWS_PLATFORM) {
+      await execSync("rd", ["/s", "/q", appDirPath]);
+    } else {
+      await execSync("rm", ["-rf", appDirPath]);
+    }
   },
 };
 
 export const generateAppFiles = async () => {
-  await execSync(`yarn ts-node --transpile-only src/build.ts`);
+  await execSync("yarn", ["ts-node", "--transpile-only", "src/build.ts"]);
 };
